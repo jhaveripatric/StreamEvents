@@ -51,9 +51,29 @@ class EventController extends Controller
 
     public function markRead(Request $request)
     {
-        $eventId = $request->get('eventId');
-
-        return response()->json(['message' => 'Event marked as read/unread.']);
+        $eventId = explode('-', $request->get('eventId'))[1];
+        $eventType = explode('-', $request->get('eventId'))[0];
+        if($eventType === "follower"){
+            $updated = Follower::where('id', $eventId)->update(['read' => DB::raw('NOT `read`')]);
+            $updatedReadValue = Follower::where('id', $eventId)->value('read');
+        }
+        if($eventType === "subscriber"){
+            $updated = Subscriber::where('id', $eventId)->update(['read' => DB::raw('NOT `read`')]);
+            $updatedReadValue = Subscriber::where('id', $eventId)->value('read');
+        }
+        if($eventType === "donation"){
+            $updated = Donation::where('id', $eventId)->update(['read' => DB::raw('NOT `read`')]);
+            $updatedReadValue = Donation::where('id', $eventId)->value('read');
+        }
+        if($eventType === "sale"){
+            $updated = MerchSale::where('id', $eventId)->update(['read' => DB::raw('NOT `read`')]);
+            $updatedReadValue = MerchSale::where('id', $eventId)->value('read');
+        }
+        $responseArray = [
+            'updated' => $updatedReadValue,
+            'message' => 'Event marked as read/unread.'
+        ];
+        return response()->json($responseArray);
     }
 
     public function aggregation()

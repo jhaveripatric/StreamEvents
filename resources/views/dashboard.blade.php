@@ -119,16 +119,28 @@
         });
 
         $(document).on('click', '.mark-read', function() {
+            var clickedButton = $(this);
             var eventId = $(this).data('event-id');
             console.log('clicked'+eventId);
             $.ajax({
                 type: 'POST',
-                url: '/markRead',
+                url: '/api/markRead',
                 data: {
                     eventId: eventId
                 },
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
                 success: function(response) {
-                    // Handle success response
+                    if (response.updated) {
+                        clickedButton.text('Mark Unread');
+                        clickedButton.removeClass('mark-read h-8 px-4 m-2 text-sm bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full')
+                                    .addClass('mark-read h-8 px-4 m-2 text-sm bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-full');
+                    } else {
+                        clickedButton.text('Mark Read');
+                        clickedButton.removeClass('mark-read h-8 px-4 m-2 text-sm bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-full')
+                                    .addClass('mark-read h-8 px-4 m-2 text-sm bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full');
+                    }
                 }
             });
         });
