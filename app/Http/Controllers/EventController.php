@@ -7,33 +7,83 @@ use App\Models\Follower;
 use App\Models\Subscriber;
 use App\Models\Donation;
 use App\Models\MerchSale;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class EventController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $events = [];
-
-        $followers = Follower::orderBy('created_at', 'desc')->take(100)->get();
+        $followers = Follower::orderBy('created_at', 'desc')->get();
         foreach ($followers as $follower) {
-            $events[] = $follower->name . ' followed you!';
+            $events[] = ['id'=>'follower-'.$follower->id,'message'=>$follower->name . ' followed you!', 'read'=>$follower->read];
         }
 
-        $subscribers = Subscriber::orderBy('created_at', 'desc')->take(100)->get();
+        $subscribers = Subscriber::orderBy('created_at', 'desc')->get();
         foreach ($subscribers as $subscriber) {
-            $events[] = $subscriber->name . ' (Tier' . $subscriber->subscription_tier . ') subscribed to you!';
+            $events[] = ['id'=>'subscriber-'.$subscriber->id,'message'=>$subscriber->name . ' (Tier' . $subscriber->subscription_tier . ') subscribed to you!', 'read'=>$subscriber->read];
         }
 
-        $donations = Donation::orderBy('created_at', 'desc')->take(100)->get();
+        $donations = Donation::orderBy('created_at', 'desc')->get();
         foreach ($donations as $donation) {
-            $events[] = $donation->name . ' donated ' . $donation->amount . ' ' . $donation->currency . ' to you!';
+            $events[] = ['id'=>'donation-'.$donation->id,'message'=>$donation->name . ' donated ' . $donation->amount . ' ' . $donation->currency . ' to you!', 'read'=>$donation->read];
         }
 
-        $merchSales = MerchSale::orderBy('created_at', 'desc')->take(100)->get();
+        $merchSales = MerchSale::orderBy('created_at', 'desc')->get();
         foreach ($merchSales as $sale) {
-            $events[] = $sale->name . ' bought ' . $sale->item_name . ' from you for ' . $sale->amount . ' ' . $sale->price . '!';
+            $events[] = ['id'=>'sale-'.$sale->id,'message'=>$sale->name . ' bought ' . $sale->item_name . ' from you for ' . $sale->amount . ' ' . $sale->price . '!', 'read'=>$sale->read];
         }
 
-        return response()->json($events);
+        $page = $request->get('page', 1);
+        $perPage = 100;
+        $offset = ($page - 1) * $perPage;
+        $paginatedEvents = array_slice($events, $offset, $perPage);
+        $totalEvents = count($events);
+        $totalPages = ceil($totalEvents / $perPage);
+
+        $responseArray = [
+            'events' => $paginatedEvents,
+            'totalPages' => $totalPages,
+        ];
+        return response()->json($responseArray);
+    }
+
+    public function markRead(Request $request)
+    {
+        $eventId = $request->get('eventId');
+
+        return response()->json(['message' => 'Event marked as read/unread.']);
+    }
+
+    public function aggregation()
+    {
+        $startDate = Carbon::now()->subDays(30);
+        $donationRevenue = Donation::where('created_at', '>=', $startDate)->sum('amount');
+
+        $tier1Subscriptions = Subscriber::where('created_at', '>=', $startDate)->where('subscription_tier', 'tier1')->count();
+        $tier2Subscriptions = Subscriber::where('created_at', '>=', $startDate)->where('subscription_tier', 'tier2')->count();
+        $tier3Subscriptions = Subscriber::where('created_at', '>=', $startDate)->where('subscription_tier', 'tier3')->count();
+        $subscriptionRevenue = ($tier1Subscriptions * 5) + ($tier2Subscriptions * 10) + ($tier3Subscriptions * 15);
+        $merchRevenue = MerchSale::where('created_at', '>=', $startDate)->sum(DB::raw('amount * price'));
+
+        $totalRevenue = $donationRevenue + $subscriptionRevenue + $merchRevenue;
+
+        $followersGained = Follower::where('created_at', '>=', $startDate)->count();
+
+        $topItems = MerchSale::where('created_at', '>=', $startDate)
+            ->groupBy('item_name')
+            ->selectRaw('item_name, SUM(amount*price) as total_sales')
+            ->orderByDesc('total_sales')
+            ->take(3)
+            ->get();
+
+        $responseArray = [
+            'totalRevenue'=> $totalRevenue,
+            'followersGained' => $followersGained,
+            'topItems' => $topItems,
+        ];
+        return response()->json($responseArray);
     }
 }
+

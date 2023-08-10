@@ -20,4 +20,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/events', 'App\Http\Controllers\EventController@index');
+    Route::get('/aggregation', 'App\Http\Controllers\EventController@aggregation');
+    Route::post('/markRead', 'EventController@markRead');
 });
