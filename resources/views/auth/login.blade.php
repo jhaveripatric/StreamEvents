@@ -43,5 +43,17 @@
                 {{ __('Log in') }}
             </x-primary-button>
         </div>
+        <div class="flex items-center justify-between mt-4">
+            <a class="text-sm text-gray-600 rounded-md" href="#">
+                {{ __('Login With') }}
+            </a>
+
+            <a href="{{ route('auth.social', 'facebook') }}" class="btn btn-primary h-8 px-4 m-2 text-sm bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
+                Facebook
+            </a>
+            <a href="{{ route('auth.social', 'google') }}" class="btn btn-danger h-8 px-4 m-2 text-sm bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-full">
+                Google
+            </a>
+        </div>
     </form>
 </x-guest-layout>
